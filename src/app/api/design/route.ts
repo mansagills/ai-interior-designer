@@ -55,8 +55,12 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error:', error);
+    // Ensure we return a valid JSON response even in case of errors
     return NextResponse.json(
-      { error: 'Failed to generate design' },
+      { 
+        error: error instanceof Error ? error.message : 'An unexpected error occurred',
+        details: error instanceof Error ? error.stack : 'Unknown error'
+      },
       { status: 500 }
     );
   }

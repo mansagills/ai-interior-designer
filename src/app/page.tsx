@@ -11,6 +11,11 @@ interface DesignResponse {
   generatedImageUrls: string[];
 }
 
+interface ErrorResponse {
+  error: string;
+  details?: string;
+}
+
 export default function Home() {
   const [imageBase64, setImageBase64] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
@@ -43,10 +48,11 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate design');
+        const errorData = data as ErrorResponse;
+        throw new Error(errorData.error || 'Failed to generate design');
       }
 
-      setResults(data);
+      setResults(data as DesignResponse);
     } catch (error) {
       console.error('Error:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate design. Please try again.');
