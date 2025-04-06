@@ -19,6 +19,20 @@ A web application that uses AI to generate interior design suggestions and visua
 - OpenAI API (GPT-4 and DALL-E 3)
 - React Markdown
 
+## Security Considerations
+
+### Environment Variables
+- Never commit API keys or sensitive information to the repository
+- Use `.env.local` for local development (this file is gitignored)
+- For production, add environment variables in the Vercel dashboard
+- See `.env.example` for required variables
+
+### API Key Security
+- Keep your OpenAI API key secure and never expose it in client-side code
+- All API calls are made server-side through Next.js API routes
+- Regularly rotate your API keys
+- Monitor your API usage for any suspicious activity
+
 ## Getting Started
 
 ### Prerequisites
@@ -42,9 +56,13 @@ A web application that uses AI to generate interior design suggestions and visua
    yarn install
    ```
 
-3. Create a `.env.local` file in the root directory and add your OpenAI API key:
-   ```
-   OPENAI_API_KEY=your_api_key_here
+3. Set up environment variables:
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env.local
+   
+   # Edit .env.local with your actual API key
+   # Never commit this file!
    ```
 
 4. Run the development server:
@@ -62,7 +80,9 @@ The application is configured for deployment on Vercel. To deploy:
 
 1. Push your code to GitHub
 2. Connect your repository to Vercel
-3. Add your OpenAI API key in the Vercel environment variables
+3. Add your environment variables in the Vercel dashboard:
+   - Go to Project Settings > Environment Variables
+   - Add `OPENAI_API_KEY` with your production API key
 4. Deploy!
 
 ## Project Structure
@@ -73,11 +93,7 @@ The application is configured for deployment on Vercel. To deploy:
 
 ## API Integration
 
-The application includes a mock API endpoint at `/api/design` that simulates the AI design generation process. To integrate with a real AI service:
-
-1. Update the API endpoint in `src/app/api/design/route.ts`
-2. Modify the request/response format to match your AI service's requirements
-3. Add any necessary authentication or API keys
+The application uses OpenAI's API for generating design suggestions and visualizations. All API calls are made server-side through Next.js API routes to ensure API key security.
 
 ## Contributing
 
