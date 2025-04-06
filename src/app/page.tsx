@@ -14,6 +14,7 @@ interface DesignResponse {
 interface ErrorResponse {
   error: string;
   details?: string;
+  stack?: string;
 }
 
 export default function Home() {
@@ -31,6 +32,18 @@ export default function Home() {
     setIsLoading(true);
 
     try {
+      // Validate required fields
+      if (!imageBase64) {
+        throw new Error('Please upload an image');
+      }
+      if (!selectedStyle) {
+        throw new Error('Please select a design style');
+      }
+      if (!imageDescription) {
+        throw new Error('Please describe the type of room');
+      }
+
+      console.log('Sending request to API...');
       const response = await fetch('/api/design', {
         method: 'POST',
         headers: {
@@ -45,16 +58,24 @@ export default function Home() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+        console.log('Received response from API:', data);
+      } catch (parseError) {
+        console.error('Error parsing API response:', parseError);
+        throw new Error('Failed to parse server response');
+      }
 
       if (!response.ok) {
         const errorData = data as ErrorResponse;
+        console.error('API returned error:', errorData);
         throw new Error(errorData.error || 'Failed to generate design');
       }
 
       setResults(data as DesignResponse);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in handleGenerateDesign:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate design. Please try again.');
     } finally {
       setIsLoading(false);
