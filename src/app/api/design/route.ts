@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { DesignRequest, DesignResponse, OpenAIError } from '@/types/openai';
+import { DesignRequest, DesignResponse } from '@/types/openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -8,136 +8,55 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as DesignRequest;
+    const body: DesignRequest = await request.json();
     const { imageBase64, style, additionalPreferences, imageDescription, designPrompt } = body;
 
-    // Validate required fields
-    if (!imageBase64) {
+    if (!imageBase64 || !style) {
       return NextResponse.json(
-        { error: 'No image provided' },
-        { status: 400 }
-      );
-    }
-    if (!style) {
-      return NextResponse.json(
-        { error: 'No style selected' },
-        { status: 400 }
-      );
-    }
-    if (!imageDescription) {
-      return NextResponse.json(
-        { error: 'No room description provided' },
+        { error: 'Image and style are required' },
         { status: 400 }
       );
     }
 
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
-
-    console.log('Starting design generation process...');
-
-    // Generate design suggestions using GPT-4o-mini
-    console.log('Generating design suggestions...');
+    // Generate design suggestions using GPT-4
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: 'gpt-4o-mini',
       messages: [
         {
-          role: "system",
-          content: "You are an expert interior designer. Analyze the provided space and suggest improvements based on the requested style and preferences. Format your response in markdown with clear sections and bullet points."
+          role: 'system',
+          content: 'You are an expert interior designer. Provide detailed design suggestions based on the uploaded image and selected style.'
         },
         {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Please analyze this ${imageDescription} and provide design suggestions for a ${style} style${
-                additionalPreferences ? ` with the following preferences: ${additionalPreferences}` : ''
-              }. Format your response in markdown with the following sections:
-
-## Color Palette
-- List 3-5 main colors
-- Include accent colors
-- Explain the color scheme rationale
-
-## Furniture Recommendations
-- List key furniture pieces
-- Include specific style suggestions
-- Mention any space-saving solutions
-
-## Lighting Design
-- Ambient lighting suggestions
-- Task lighting recommendations
-- Decorative lighting ideas
-
-## Textiles & Materials
-- Fabric suggestions
-- Material recommendations
-- Pattern ideas
-
-## Decorative Elements
-- Artwork suggestions
-- Accessory recommendations
-- Plant and greenery ideas
-
-## Space Optimization
-- Layout improvements
-- Storage solutions
-- Flow and functionality tips`
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageBase64
-              }
-            }
-          ]
+          role: 'user',
+          content: `Image description: ${imageDescription}\nStyle: ${style}\nAdditional preferences: ${additionalPreferences || 'None'}\nDesign prompt: ${designPrompt || 'None'}\n\nPlease provide detailed design suggestions in markdown format.`
         }
       ],
-      max_tokens: 1000
     });
 
     const designSuggestions = completion.choices[0].message.content || '';
-    console.log('Design suggestions generated successfully');
 
-    // Generate design visualization using OpenAI
-    console.log('Generating design visualization...');
-    const imagePrompt = `Create a photorealistic interior design visualization of this ${imageDescription}, redesigned in a ${style} style${
-      additionalPreferences ? ` with the following elements: ${additionalPreferences}` : ''
-    }${designPrompt ? `. Specifically: ${designPrompt}` : ''}. The image should be an ultra-realistic photograph with perfect lighting, shadows, and materials. Use professional architectural photography techniques with high dynamic range, perfect focus, and natural color balance.`;
-
+    // Generate image using DALL-E
     const imageResponse = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: imagePrompt,
+      model: 'dall-e-3',
+      prompt: `Create a photorealistic interior design visualization of a ${imageDescription} in ${style} style. ${designPrompt ? `Incorporate these elements: ${designPrompt}` : ''} Make it look like a professional interior design photograph.`,
       n: 1,
-      size: "1024x1024",
-      quality: "hd",
-      style: "natural",
-      response_format: "url"
+      size: '1024x1024',
+      quality: 'hd',
+      style: 'natural',
     });
 
     const generatedImageUrls = imageResponse.data.map(img => img.url || '');
-    console.log('Generated image URLs:', generatedImageUrls);
 
     const response: DesignResponse = {
       designSuggestions,
-      generatedImageUrls
+      generatedImageUrls,
     };
 
-    console.log('Final response:', response);
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error processing design request:', error);
-    const openaiError = error as OpenAIError;
+    console.error('Error:', error);
     return NextResponse.json(
-      { 
-        error: openaiError.error?.message || 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Failed to generate design' },
       { status: 500 }
     );
   }

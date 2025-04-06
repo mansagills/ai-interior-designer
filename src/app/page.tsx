@@ -9,7 +9,6 @@ import ResultPanel from '@/components/ResultPanel';
 interface DesignResponse {
   designSuggestions: string;
   generatedImageUrls: string[];
-  skyboxUrl: string;
 }
 
 export default function Home() {

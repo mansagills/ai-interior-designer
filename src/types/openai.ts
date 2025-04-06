@@ -2,13 +2,18 @@ export interface DesignRequest {
   imageBase64: string;
   style: string;
   additionalPreferences?: string;
-  imageDescription: string;
+  imageDescription?: string;
   designPrompt?: string;
 }
 
 export interface DesignResponse {
   designSuggestions: string;
   generatedImageUrls: string[];
+}
+
+export interface MidjourneyResponse {
+  imageUrl: string;
+  status: string;
 }
 
 export interface OpenAIError {
