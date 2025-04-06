@@ -11,22 +11,10 @@ export interface DesignResponse {
   generatedImageUrls: string[];
 }
 
-export interface MidjourneyResponse {
-  imageUrl: string;
-  status: string;
-}
-
 export interface OpenAIError {
   error: {
     message: string;
     type: string;
     code: string;
   };
-}
-
-export interface RunwareResponse {
-  imageUrl?: string;
-  images?: string[];
-  status: string;
-  error?: string;
 } 
