@@ -148,7 +148,6 @@ export default function Home() {
             <ResultPanel
               designSuggestions={results.designSuggestions}
               generatedImageUrls={results.generatedImageUrls}
-              results={{ skyboxUrl: results.skyboxUrl }}
             />
             <button
               onClick={() => {
