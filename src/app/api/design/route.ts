@@ -2,41 +2,58 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { DesignRequest, DesignResponse } from '@/types/openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI client with error handling
+let openai: OpenAI | undefined;
+try {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+} catch (error) {
+  console.error('Failed to initialize OpenAI client:', error);
+}
 
 export async function POST(request: Request) {
-  try {
-    // Log the start of the request
-    console.log('Starting design generation request...');
+  // Ensure we always return a valid JSON response
+  const errorResponse = (message: string, status: number = 500) => {
+    return NextResponse.json(
+      { error: message },
+      { status }
+    );
+  };
 
-    // Parse the request body
+  try {
+    // Check if OpenAI client is initialized
+    if (!openai) {
+      return errorResponse('OpenAI client not initialized', 500);
+    }
+
+    // Check if API key is set
+    if (!process.env.OPENAI_API_KEY) {
+      return errorResponse('OpenAI API key not configured', 500);
+    }
+
+    // Parse request body
     let body: DesignRequest;
     try {
       body = await request.json();
-      console.log('Request body parsed successfully');
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return NextResponse.json(
-        { error: 'Invalid request body', details: 'Could not parse JSON' },
-        { status: 400 }
-      );
+    } catch (error) {
+      return errorResponse('Invalid request body', 400);
     }
 
     const { imageBase64, style, additionalPreferences, imageDescription, designPrompt } = body;
 
     // Validate required fields
-    if (!imageBase64 || !style) {
-      console.error('Missing required fields:', { imageBase64: !!imageBase64, style: !!style });
-      return NextResponse.json(
-        { error: 'Image and style are required' },
-        { status: 400 }
-      );
+    if (!imageBase64) {
+      return errorResponse('Image is required', 400);
+    }
+    if (!style) {
+      return errorResponse('Style is required', 400);
+    }
+    if (!imageDescription) {
+      return errorResponse('Room description is required', 400);
     }
 
-    // Generate design suggestions using GPT-4
-    console.log('Generating design suggestions...');
+    // Generate design suggestions
     let completion;
     try {
       completion = await openai.chat.completions.create({
@@ -52,22 +69,14 @@ export async function POST(request: Request) {
           }
         ],
       });
-      console.log('Design suggestions generated successfully');
-    } catch (gptError) {
-      console.error('Error generating design suggestions:', gptError);
-      return NextResponse.json(
-        { 
-          error: 'Failed to generate design suggestions',
-          details: gptError instanceof Error ? gptError.message : 'Unknown error'
-        },
-        { status: 500 }
-      );
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      return errorResponse('Failed to generate design suggestions', 500);
     }
 
     const designSuggestions = completion.choices[0].message.content || '';
 
-    // Generate image using DALL-E
-    console.log('Generating image...');
+    // Generate image
     let imageResponse;
     try {
       imageResponse = await openai.images.generate({
@@ -78,36 +87,20 @@ export async function POST(request: Request) {
         quality: 'hd',
         style: 'natural',
       });
-      console.log('Image generated successfully');
-    } catch (dalleError) {
-      console.error('Error generating image:', dalleError);
-      return NextResponse.json(
-        { 
-          error: 'Failed to generate image',
-          details: dalleError instanceof Error ? dalleError.message : 'Unknown error'
-        },
-        { status: 500 }
-      );
+    } catch (error) {
+      console.error('DALL-E API error:', error);
+      return errorResponse('Failed to generate image', 500);
     }
 
-    const generatedImageUrls = imageResponse.data.map(img => img.url || '');
+    const generatedImageUrls = imageResponse.data.map((img: { url?: string }) => img.url || '');
 
-    const response: DesignResponse = {
+    // Return success response
+    return NextResponse.json({
       designSuggestions,
       generatedImageUrls,
-    };
-
-    console.log('Request completed successfully');
-    return NextResponse.json(response);
+    });
   } catch (error) {
-    console.error('Unexpected error in API route:', error);
-    return NextResponse.json(
-      { 
-        error: 'An unexpected error occurred',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      },
-      { status: 500 }
-    );
+    console.error('Unexpected error:', error);
+    return errorResponse('An unexpected error occurred');
   }
 } 
